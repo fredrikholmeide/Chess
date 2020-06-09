@@ -71,6 +71,8 @@ class GameState():
             print("No undo possible")
 
 
+    def test(self):
+        print("test")
     '''
     All moves considering checks
     '''

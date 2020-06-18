@@ -26,6 +26,9 @@ class GameState():
         self.enPassantPossible = () #coordinates for the square where en passant is possible
         self.pins = []
         self.checks = []
+        self.currentCastlingRight = CastleRights(True, True, True, True)
+        self.castleRightsLog = [CastleRights(self.currentCastlingRight.wks, self.currentCastlingRight.bks,
+                                             self.currentCastlingRight.wqs, self.currentCastlingRight.bqs)]
 
     '''
     Takes a Move as a parameter eand exevutes it, doesnt work for edge cases
@@ -50,6 +53,21 @@ class GameState():
             self.enPassantPossible = ()
         if move.isEnpassantMoved:
             self.board[move.startRow][move.endCol] = "--"
+        #Castle move
+        if move.isCastleMove:
+            if move.endCol - move.startCol == 2: #Kingside
+                self.board[move.endRow][move.endCol-1] = self.board[move.endRow][move.endCol +1]
+                self.board[move.endRow][move.endCol+1] = '--'
+            else: #Queenside
+                self.board[move.endRow][move.endCol+1] = self.board[move.endRow][move.endCol -2]
+                self.board[move.endRow][move.endCol -2] = '--'
+
+
+        #update casteling rights - whenever it is rook or a king
+        self.updateCastleRights(move)
+        self.castleRightsLog.append(CastleRights(self.currentCastlingRight.wks, self.currentCastlingRight.bks,
+                                             self.currentCastlingRight.wqs, self.currentCastlingRight.bqs))
+
 
     def undoMove(self):
         if len(self.moveLog) > 0:
@@ -66,13 +84,40 @@ class GameState():
                 self.wKLocation = (lastMove.startRow, lastMove.startCol)
             elif lastMove.pieceMoved == "bK":
                 self.bKLocation = (lastMove.startRow, lastMove.startCol)
-
+            self.castleRightsLog.pop()
+            newRights = self.castleRightsLog[-1]
+            self.currentCastlingRight = CastleRights(newRights.wks, newRights.bks, newRights.wqs, newRights.bqs)
+            if lastMove.isCastleMove:
+                if lastMove.endCol - lastMove.startCol == 2:
+                    self.board[lastMove.endRow][lastMove.endCol +1] = self.board[lastMove.endRow][lastMove.endCol -1]
+                    self.board[lastMove.endRow][lastMove.endCol -1] = '--'
+                else:
+                    self.board[lastMove.endRow][lastMove.endCol -2] = self.board[lastMove.endRow][lastMove.endCol +1]
+                    self.board[lastMove.endRow][lastMove.endCol +1] = '--'
+            self.checkMate = False
+            self.staleMate = False
         else:
             print("No undo possible")
 
-
-    def test(self):
-        print("test")
+    def updateCastleRights(self, move):
+        if move.pieceMoved == 'wK':
+            self.currentCastlingRight.wks = False
+            self.currentCastlingRight.wqs = False
+        elif move.pieceMoved == 'bK':
+            self.currentCastlingRight.bks = False
+            self.currentCastlingRight.bqs = False
+        elif move.pieceMoved == 'wR':
+            if move.startRow == 7:
+                if move.startCol == 0:
+                    self.currentCastlingRight.wqs = False
+                elif move.startCol == 7:
+                    self.currentCastlingRight.wks = False
+        elif move.pieceMoved == 'bR':
+            if move.startRow == 0:
+                if move.startCol == 0:
+                    self.currentCastlingRight.bqs = False
+                elif move.startCol == 7:
+                    self.currentCastlingRight.bks = False
     '''
     All moves considering checks
     '''
@@ -105,7 +150,7 @@ class GameState():
                     if moves[i].pieceMoved[1] != "K":
                         if not (moves[i].endRow, moves[i].endCol) in validSquares:
                             moves.remove(moves[i])
-            else: #Means Kink is in double check
+            else: #Means King is in double check
                 self.getKingMoves(kingRow, kingCol, moves)
             if len(moves) == 0:
                 self.checkMate = True
@@ -113,6 +158,7 @@ class GameState():
             moves = self.getAllPossibleMoves()
             if len(moves) == 0:
                 self.staleMate = True
+            self.getCastleMoves(kingRow, kingCol, moves)
         return moves
 
 
@@ -169,6 +215,16 @@ class GameState():
                     inCheck = True
                     checks.append((endRow, endCol, d[0], d[1]))
         return inCheck, pins, checks
+
+
+    def squareUnderAttack(self, r, c):
+        self.whiteToMove = not self.whiteToMove
+        oppMoves = self.getAllPossibleMoves()
+        self.whiteToMove = not self.whiteToMove
+        for move in oppMoves:
+            if move.endRow == r and move.endCol == c:
+                return True
+        return False
 
     '''
     All moves not considering checks
@@ -380,6 +436,39 @@ class GameState():
                     else:
                         self.bKLocation = (row, col)
 
+
+    '''
+    Generate all valid castle moves for the king at (r, c) and add them to the list of moves
+    '''
+
+    def getCastleMoves(self, r, c, moves):
+        if self.squareUnderAttack(r, c):
+            return
+        if (self.whiteToMove and self.currentCastlingRight.wks) or (not self.whiteToMove and self.currentCastlingRight.bks):
+            self.getKingsideCastleMoves(r, c, moves)
+        if (self.whiteToMove and self.currentCastlingRight.wqs) or (not self.whiteToMove and self.currentCastlingRight.bqs):
+            self.getQueensideCastleMoves(r, c, moves)
+
+    def getKingsideCastleMoves(self, r, c, moves):
+        if self.board[r][c+1] == '--' and self.board[r][c+2] == '--':
+            if not self.squareUnderAttack(r, c+1) and not self.squareUnderAttack(r, c+2):
+                moves.append(Move((r, c), (r, c+2), self.board, isCastleMove = True))
+
+
+    def getQueensideCastleMoves(self, r, c, moves):
+        if self.board[r][c-1] == '--' and self.board[r][c-2] == '--' and self.board[r][c-3] == '--':
+            if not self.squareUnderAttack(r, c-1) and not self.squareUnderAttack(r, c-2):
+                moves.append(Move((r,c), (r,c-2), self.board, isCastleMove = True))
+
+
+
+class CastleRights():
+    def __init__(self, wks, bks, wqs, bqs):
+        self.wks = wks
+        self.bks = bks
+        self.wqs = wqs
+        self.bqs = bqs
+
 class Move():
     #maps keys to values
     # key : value
@@ -392,7 +481,7 @@ class Move():
     colsToFiles = {v: k for k,v in filesToCols.items()}
 
 
-    def __init__(self, startSq, endSq, board):
+    def __init__(self, startSq, endSq, board, isCastleMove = False):
         self.startRow = startSq[0]
         self.startCol = startSq[1]
         self.endRow = endSq[0]
@@ -410,7 +499,9 @@ class Move():
             capCol = "w" if self.pieceMoved[0] == "b" else "b"
             self.isEnpassantMoved = True
             self.pieceCaptured = capCol+"P"
+        self.isCastleMove = isCastleMove
         self.moveId = self.startRow*1000 + self.startCol*100 + self.endRow*10 + self.endCol
+
 
     '''
     Overriding the equals method

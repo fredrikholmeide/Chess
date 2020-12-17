@@ -1,6 +1,7 @@
-
+#Todo:
+# - King capture possible..
 import pygame as p
-
+import random
 from Chess import ChessEngine
 
 WIDTH = HEIGHT = 512
@@ -54,6 +55,11 @@ def main():
                     moveMade = False
                     animate = False
                     gameOver = False
+            elif not gs.whiteToMove:
+                best_move = minimax(gs)
+                gs.makeMove(best_move)
+                moveMade = True
+                animate = True
             elif e.type == p.MOUSEBUTTONDOWN:
                 if not gameOver:
                     location = p.mouse.get_pos() #(x,y) location
@@ -98,6 +104,64 @@ def main():
         clock.tick(MAX_FPS)
         p.display.flip()
 
+
+def minimax(state):
+    best_score = 10000
+    best_move = 0
+    for move in state.getValidMoves():
+        state.makeMove(move)
+        min_value = maxValue(state, 0)
+        if min_value < best_score:
+            best_score = min_value
+            best_move = move
+        state.undoMove()
+    return best_move
+
+def maxValue(state, depth):
+    if state.checkMate:
+        if state.whiteToMove:
+            return -10000
+        else:
+            return 10000
+    elif depth == 2:
+        return evalPos(state)
+    else:
+        best_score = -10000
+        for move in state.getValidMoves():
+            state.makeMove(move)
+            min_value = minValue(state, depth+1)
+            if  min_value > best_score:
+                best_score = min_value
+            state.undoMove()
+    return best_score
+
+def minValue(state, depth):
+    if state.checkMate:
+        if state.whiteToMove:
+            return 10000
+        else:
+            return -10000
+    elif depth == 2:
+        return evalPos(state)
+    else:
+        best_score = 10000
+        for move in state.getValidMoves():
+            state.makeMove(move)
+            max_value = maxValue(state, depth+1)
+            if  max_value < best_score:
+                best_score = max_value
+            state.undoMove()
+    return best_score
+
+
+def evalPos(state):
+    evaluation = {"bK": -900, "bQ": -90, "bR": -50, "bN": -30, "bB": -30, "bP": -10,
+                  "wK": 900, "wQ": 90, "wR": 50, "wN": 30, "wB": 30, "wP": 10, "--": 0}
+    score = 0
+    for row in state.board:
+        for square in row:
+            score += evaluation[square]
+    return score
 '''
 Highligjt square selected and moves for piece selected
 '''

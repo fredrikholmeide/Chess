@@ -503,6 +503,7 @@ class Move():
         self.moveId = self.startRow*1000 + self.startCol*100 + self.endRow*10 + self.endCol
 
 
+
     '''
     Overriding the equals method
     '''

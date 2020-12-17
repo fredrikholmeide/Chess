@@ -9,7 +9,6 @@ DIMENSION = 8
 SQ_SIZE = HEIGHT // DIMENSION
 MAX_FPS = 15 # Animations later on
 IMAGES = {}
-
 '''
 Initialize a global dictionary of images. This will be called only ones
 '''
@@ -57,9 +56,10 @@ def main():
                     gameOver = False
             elif not gs.whiteToMove:
                 best_move = minimax(gs)
-                gs.makeMove(best_move)
-                moveMade = True
-                animate = True
+                if best_move in gs.getValidMoves():
+                    gs.makeMove(best_move)
+                    moveMade = True
+                    animate = True
             elif e.type == p.MOUSEBUTTONDOWN:
                 if not gameOver:
                     location = p.mouse.get_pos() #(x,y) location
@@ -73,7 +73,6 @@ def main():
                         playerClicks.append(sqSelected)
                     if len(playerClicks) == 2:
                         move = ChessEngine.Move(playerClicks[0], playerClicks[1], gs.board)
-                        print(move.getChessNotation())
                         for i in range(len(validMoves)):
                             if move == validMoves[i]:
                                 gs.makeMove(validMoves[i])
@@ -91,7 +90,7 @@ def main():
             animate = False
         drawGameState(screen, gs, validMoves, sqSelected)
 
-        if gs.checkMate :
+        if gs.checkMate:
             gameOver = True
             if gs.whiteToMove:
                 drawText(screen, 'Black wins by checkmate')
@@ -110,14 +109,15 @@ def minimax(state):
     best_move = 0
     for move in state.getValidMoves():
         state.makeMove(move)
-        min_value = maxValue(state, 0)
+        min_value = maxValue(state, 0, -float("inf"), float("inf"))
         if min_value < best_score:
             best_score = min_value
             best_move = move
         state.undoMove()
+    print(count)
     return best_move
 
-def maxValue(state, depth):
+def maxValue(state, depth, alpha, beta):
     if state.checkMate:
         if state.whiteToMove:
             return -10000
@@ -126,16 +126,19 @@ def maxValue(state, depth):
     elif depth == 2:
         return evalPos(state)
     else:
-        best_score = -10000
+        best_score = -float("inf")
         for move in state.getValidMoves():
             state.makeMove(move)
-            min_value = minValue(state, depth+1)
-            if  min_value > best_score:
+            min_value = minValue(state, depth+1, alpha, beta)
+            state.undoMove()
+            if min_value > best_score:
                 best_score = min_value
-            state.undoMove()
+            if min_value > beta:
+                return min_value
+            alpha = max(alpha, min_value)
     return best_score
 
-def minValue(state, depth):
+def minValue(state, depth, alpha, beta):
     if state.checkMate:
         if state.whiteToMove:
             return 10000
@@ -144,17 +147,22 @@ def minValue(state, depth):
     elif depth == 2:
         return evalPos(state)
     else:
-        best_score = 10000
+        best_score = float("inf")
         for move in state.getValidMoves():
             state.makeMove(move)
-            max_value = maxValue(state, depth+1)
-            if  max_value < best_score:
-                best_score = max_value
+            max_value = maxValue(state, depth+1, alpha, beta)
             state.undoMove()
+            if max_value < best_score:
+                best_score = max_value
+            if max_value < alpha:
+                return max_value
+            beta = min(beta, max_value)
     return best_score
 
-
+count=0
 def evalPos(state):
+    global count
+    count += 1
     evaluation = {"bK": -900, "bQ": -90, "bR": -50, "bN": -30, "bB": -30, "bP": -10,
                   "wK": 900, "wQ": 90, "wR": 50, "wN": 30, "wB": 30, "wP": 10, "--": 0}
     score = 0

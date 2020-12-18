@@ -209,9 +209,9 @@ class GameState():
         knightMoves = ((-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1))
         for move in knightMoves:
             endRow = startRow + move[0]
-            endCol = startRow + move[1]
+            endCol = startCol + move[1]
             if 0 <= endRow < 8 and 0 <= endCol < 8:
-                if self.board[endRow][startRow] == enemyColor+"N":
+                if self.board[endRow][endCol] == enemyColor+"N":
                     inCheck = True
                     checks.append((endRow, endCol, d[0], d[1]))
         return inCheck, pins, checks

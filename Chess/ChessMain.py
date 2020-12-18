@@ -1,5 +1,6 @@
 #Todo:
 # - King capture possible..
+# - Weird action by knight
 import pygame as p
 import random
 from Chess import ChessEngine
@@ -168,7 +169,7 @@ def evalPos(state):
     score = 0
     for row in state.board:
         for square in row:
-            score += evaluation[square]
+            score += evaluation[square] + random.random()
     return score
 '''
 Highligjt square selected and moves for piece selected

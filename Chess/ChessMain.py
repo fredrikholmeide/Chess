@@ -1,6 +1,5 @@
 #Todo:
 # - King capture possible..
-# - Weird action by knight
 import pygame as p
 import random
 from Chess import ChessEngine
@@ -134,7 +133,7 @@ def maxValue(state, depth, alpha, beta):
             state.undoMove()
             if min_value > best_score:
                 best_score = min_value
-            if min_value > beta:
+            if min_value >= beta:
                 return min_value
             alpha = max(alpha, min_value)
     return best_score
@@ -155,7 +154,7 @@ def minValue(state, depth, alpha, beta):
             state.undoMove()
             if max_value < best_score:
                 best_score = max_value
-            if max_value < alpha:
+            if max_value <= alpha:
                 return max_value
             beta = min(beta, max_value)
     return best_score
